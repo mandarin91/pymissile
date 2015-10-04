@@ -73,8 +73,8 @@ class Game:
                 if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
                     pygame.quit()
                     sys.exit()
-                elif event.type == KEYUP and event.key == K_SPACE:
-                    self.toggleFullScreen()
+                # elif event.type == KEYUP and event.key == K_SPACE:
+                #     self.toggleFullScreen()
                 elif event.type == MOUSEMOTION:
                     mousex, mousey = event.pos
                     crossrect.center = event.pos
@@ -114,12 +114,12 @@ class Game:
             pygame.display.flip()
             CLOCK.tick(FPS)
 
-    def toggleFullScreen(self):
-        FULLSCR = not FULLSCR
-        if FULLSCR:
-            SCREEN = pygame.display.set_mode(SCREENSIZE, pygame.FULLSCREEN)
-        else:
-            SCREEN = pygame.display.set_mode(SCREENSIZE)
+    # def toggleFullScreen(self):
+    #     FULLSCR = not FULLSCR
+    #     if FULLSCR:
+    #         SCREEN = pygame.display.set_mode(SCREENSIZE, pygame.FULLSCREEN)
+    #     else:
+    #         SCREEN = pygame.display.set_mode(SCREENSIZE)
 
     def setup(self):
         self.missiles = []
