@@ -61,7 +61,7 @@ class Game:
 
             ticks = pygame.time.get_ticks()
             if ticks > 10000:
-                speed = int(ticks/10000)
+                self.speed = int(ticks/10000)
 
             self.add_missile() # spawn a missile every two seconds
 
@@ -170,6 +170,7 @@ class Game:
         now = pygame.time.get_ticks()
         if len(self.missiles) == 0 or now - self.missiles[-1].spawntime >= SPAWNWAIT:
             missile = Missile(start, end, self.speed)
+            print(self.speed)
             self.missiles.append(missile)
 
     def add_bomb(self, end):
@@ -202,7 +203,7 @@ class Missile:
         self.deltaX = (self.endingPoint[0] - self.startingPoint[0]) / self.endingPoint[1]
         self.missileSize = 2
         self.spawntime = pygame.time.get_ticks()
-        self.missileSpeed = random.randint(1, speed) * 0.70
+        self.missileSpeed = speed #random.randint(1, speed) * 0.70
 
     # update position method
     def update_position(self):
