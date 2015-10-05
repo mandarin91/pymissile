@@ -6,7 +6,7 @@ from pygame.locals import *
 SCREENSIZE = SCREENWIDTH, SCREENHEIGHT = 900, 600
 BATTERYRADIUS = 20
 BATTERYWIDTH = BATTERYRADIUS * 2
-SPAWNWAIT = 2000
+SPAWNWAIT = 1400
 FPS = 60
 
 #            R    G    B
@@ -46,7 +46,7 @@ class Game:
         crosshair = pygame.image.load("Crosshair.png")
         crossrect = crosshair.get_rect()
         crossrect.center = SCREENWIDTH/2, SCREENHEIGHT/2
-        crossSpeed = 8
+        crossSpeed = 9
 
         mousex = 0 # used to store x coordinate of mouse event
         mousey = 0 # used to store y coordinate of mouse event
@@ -79,6 +79,8 @@ class Game:
                     mouseClicked = True
                     # self.add_missile()
                     self.add_bomb(mousepos)
+                    explosion = Explosion(mousepos)
+                    explosion.draw()
                 elif event.type == JOYBUTTONDOWN:
                     #self.add_missile()
                     self.add_bomb(crossrect.center)
@@ -170,7 +172,6 @@ class Game:
         now = pygame.time.get_ticks()
         if len(self.missiles) == 0 or now - self.missiles[-1].spawntime >= SPAWNWAIT:
             missile = Missile(start, end, self.speed)
-            print(self.speed)
             self.missiles.append(missile)
 
     def add_bomb(self, end):
@@ -203,7 +204,7 @@ class Missile:
         self.deltaX = (self.endingPoint[0] - self.startingPoint[0]) / self.endingPoint[1]
         self.missileSize = 2
         self.spawntime = pygame.time.get_ticks()
-        self.missileSpeed = speed #random.randint(1, speed) * 0.70
+        self.missileSpeed = random.randint(int(speed/4)+1, speed) * 0.70
 
     # update position method
     def update_position(self):
@@ -233,6 +234,8 @@ class Bomb:
         self.isActive = True
         self.deltaX = (self.startingPoint[0] - self.endingPoint[0]) / (self.startingPoint[1] - self.endingPoint[1])
         self.bombSpeed = 10
+        if endingPoint[1] < SCREENHEIGHT/2:
+            self.bombSpeed = 20
         self.bombSize = 2
 
     # update position method
@@ -250,6 +253,9 @@ class Bomb:
         if self.isActive:
             pygame.draw.aaline(SCREEN, YELLOW, self.startingPoint, self.currentPosition)
             pygame.draw.circle(SCREEN, YELLOW, (int(self.currentPosition[0]), int(self.currentPosition[1])), self.bombSize)
+            # if self.currentPosition == self.endingPoint: # reached the end point
+            #     explosion = Explosion(self.currentPosition)
+            #     explosion.draw()
 
 
 # CITY #
@@ -273,5 +279,32 @@ class City:
 
     def draw(self):
         SCREEN.blit(self.city, (self.rect.x, self.rect.y))
+
+
+# EXPLOSIONS #
+class Explosion:
+
+    def __init__(self, location, max_radius=75):
+        self.location = location
+        self.maxRadius = max_radius
+        self.radius = 1
+        self.isAlive = True
+
+    def update(self):
+        delta = 1
+        self.radius += delta
+        if self.radius == self.maxRadius:
+            delta = -delta # start shrinking once it reaches the max radius
+        elif self.radius == 0:
+            self.isAlive = False
+        if self.radius <= self.maxRadius:
+            self.draw()
+
+    def draw(self):
+        colors = [RED, ORANGE, YELLOW, GRAY]
+        i = random.randrange(0, len(colors)-1)
+        pygame.draw.circle(SCREEN, colors[i], self.location, self.radius)
+        #pygame.display.flip()
+        self.update()
 
 Game().main()
