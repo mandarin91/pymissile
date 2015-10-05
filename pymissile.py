@@ -7,7 +7,6 @@ SCREENSIZE = SCREENWIDTH, SCREENHEIGHT = 900, 600
 BATTERYRADIUS = 20
 BATTERYWIDTH = BATTERYRADIUS * 2
 SPAWNWAIT = 2000
-SPEED = 1
 FPS = 60
 
 #            R    G    B
@@ -27,15 +26,17 @@ BLACK    = (  0,   0,   0)
 # MAIN CLASS
 class Game:
 
+    def __init__(self):
+        self.fullscreen = False # used for toggling
+        self.speed = 1
+
     def main(self):
         # init
-        global CLOCK, SCREEN, FULLSCR
         pygame.init()
-
-        CLOCK = pygame.time.Clock()
-        SCREEN = pygame.display.set_mode(SCREENSIZE)
-        FULLSCR = False
         pygame.display.set_caption('PyMissile')
+        global SCREEN
+        SCREEN = pygame.display.set_mode(SCREENSIZE)
+        clock = pygame.time.Clock()
 
         joystick = None
         if pygame.joystick.get_count() > 0:
@@ -58,14 +59,9 @@ class Game:
 
             SCREEN.fill(BLACK)
 
-            # ticks = pygame.time.get_ticks()
-            # print(ticks)
-            # print(CLOCK.get_time())
-            # print(CLOCK.get_rawtime())
-            # #if ticks % 5000 == 0: self.add_missile()
             ticks = pygame.time.get_ticks()
             if ticks > 10000:
-                SPEED = int(ticks/10000)
+                speed = int(ticks/10000)
 
             self.add_missile() # spawn a missile every two seconds
 
@@ -73,8 +69,8 @@ class Game:
                 if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
                     pygame.quit()
                     sys.exit()
-                # elif event.type == KEYUP and event.key == K_SPACE:
-                #     self.toggleFullScreen()
+                elif event.type == KEYUP and event.key == K_SPACE:
+                     self.toggleFullScreen()
                 elif event.type == MOUSEMOTION:
                     mousex, mousey = event.pos
                     crossrect.center = event.pos
@@ -112,14 +108,14 @@ class Game:
             # Redraw the screen and wait a clock tick.
             SCREEN.blit(crosshair, (crossrect.x, crossrect.y))
             pygame.display.flip()
-            CLOCK.tick(FPS)
+            clock.tick(FPS)
 
-    # def toggleFullScreen(self):
-    #     FULLSCR = not FULLSCR
-    #     if FULLSCR:
-    #         SCREEN = pygame.display.set_mode(SCREENSIZE, pygame.FULLSCREEN)
-    #     else:
-    #         SCREEN = pygame.display.set_mode(SCREENSIZE)
+    def toggleFullScreen(self):
+        self.fullscreen = not self.fullscreen
+        if self.fullscreen:
+            SCREEN = pygame.display.set_mode(SCREENSIZE, pygame.FULLSCREEN)
+        else:
+            SCREEN = pygame.display.set_mode(SCREENSIZE)
 
     def setup(self):
         self.missiles = []
@@ -173,7 +169,7 @@ class Game:
         end = [random.randint(0, SCREENWIDTH), SCREENHEIGHT]
         now = pygame.time.get_ticks()
         if len(self.missiles) == 0 or now - self.missiles[-1].spawntime >= SPAWNWAIT:
-            missile = Missile(start, end, SPEED)
+            missile = Missile(start, end, self.speed)
             self.missiles.append(missile)
 
     def add_bomb(self, end):
