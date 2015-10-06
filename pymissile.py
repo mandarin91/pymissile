@@ -79,8 +79,7 @@ class Game:
                     mouseClicked = True
                     # self.add_missile()
                     self.add_bomb(mousepos)
-                    explosion = Explosion(mousepos)
-                    explosion.draw()
+                    # self.add_explosion(mousepos)
                 elif event.type == JOYBUTTONDOWN:
                     #self.add_missile()
                     self.add_bomb(crossrect.center)
@@ -105,6 +104,7 @@ class Game:
             # update missile/bomb list and draw them
             self.update_missiles()
             self.update_bombs()
+            self.update_explosions()
             self.draw()
 
             # Redraw the screen and wait a clock tick.
@@ -123,6 +123,7 @@ class Game:
         self.missiles = []
         self.bombs = []
         self.cities = []
+        self.explosions = []
         self.update_missiles()
         self.update_bombs()
         self.add_cities()
@@ -143,6 +144,7 @@ class Game:
             bomb.update_position()
             if not bomb.isActive:
                 inactive_bombs.append(bomb)
+                self.add_explosion(bomb.endingPoint)
 
         for bomb in inactive_bombs:
             self.bombs.remove(bomb)
@@ -157,6 +159,16 @@ class Game:
         for city in inactive_cities:
             self.cities.remove(city)
 
+    def update_explosions(self):
+        inactive_explosions = []
+        for explosion in self.explosions:
+            explosion.update()
+            if not explosion.isActive:
+                inactive_explosions.append(explosion)
+
+        for explosion in inactive_explosions:
+            self.explosions.remove(explosion)
+
     def draw(self):
         for missile in self.missiles:
             missile.draw()
@@ -164,6 +176,8 @@ class Game:
             bomb.draw()
         for city in self.cities:
             city.draw()
+        for explosion in self.explosions:
+            explosion.draw()
         self.add_battery()
 
     def add_missile(self):
@@ -191,6 +205,9 @@ class Game:
         pygame.draw.circle(SCREEN, GRAY, (int(SCREENWIDTH/2), int(SCREENHEIGHT)), BATTERYRADIUS)
         #pygame.draw.arc(SCREEN, GRAY, [SCREENWIDTH/2 - BATTERYRADIUS, SCREENHEIGHT - BATTERYRADIUS, BATTERYWIDTH, BATTERYRADIUS], 0, pi, 2)
 
+    def add_explosion(self, position):
+        explosion = Explosion(position)
+        self.explosions.append(explosion)
 
 # MISSILE #
 class Missile:
@@ -245,7 +262,7 @@ class Bomb:
             self.currentPosition[1] -= 1 * self.bombSpeed
             self.currentPosition[0] -= self.deltaX * self.bombSpeed
         else:
-            # we've reached the bottom of the screen...
+            # we've reached the end point...
             self.isActive = False
 
     # draw the bomb to the screen
@@ -288,23 +305,23 @@ class Explosion:
         self.location = location
         self.maxRadius = max_radius
         self.radius = 1
-        self.isAlive = True
+        self.isActive = True
+        self.delta = 1
 
     def update(self):
-        delta = 1
-        self.radius += delta
+        self.radius += self.delta
         if self.radius == self.maxRadius:
-            delta = -delta # start shrinking once it reaches the max radius
+            self.delta = -self.delta # start shrinking once it reaches the max radius
         elif self.radius == 0:
-            self.isAlive = False
-        if self.radius <= self.maxRadius:
-            self.draw()
+            self.isActive = False
+        # if self.radius <= self.maxRadius:
+        #     self.draw()
 
     def draw(self):
         colors = [RED, ORANGE, YELLOW, GRAY]
         i = random.randrange(0, len(colors)-1)
         pygame.draw.circle(SCREEN, colors[i], self.location, self.radius)
-        #pygame.display.flip()
-        self.update()
+        # pygame.display.flip()
+        # self.update()
 
 Game().main()
