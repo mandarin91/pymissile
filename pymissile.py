@@ -29,6 +29,13 @@ class Game:
     def __init__(self):
         self.fullscreen = False  # used for toggling
         self.speed = 1  # speed of missiles
+        self.missiles = []
+        self.bombs = []
+        self.cities = []
+        self.explosions = []
+        self.update_missiles()
+        self.update_bombs()
+        self.add_cities()
 
     def main(self):
         # init
@@ -50,8 +57,6 @@ class Game:
 
         mousex = 0  # used to store x coordinate of mouse event
         mousey = 0  # used to store y coordinate of mouse event
-
-        self.setup()
 
         while True:  # game loop
 
@@ -111,16 +116,6 @@ class Game:
             SCREEN = pygame.display.set_mode(SCREENSIZE, pygame.FULLSCREEN)
         else:
             SCREEN = pygame.display.set_mode(SCREENSIZE)
-
-    # sets up the game
-    def setup(self):
-        self.missiles = []
-        self.bombs = []
-        self.cities = []
-        self.explosions = []
-        self.update_missiles()
-        self.update_bombs()
-        self.add_cities()
 
     # updates game state by calling other methods
     def update(self):
