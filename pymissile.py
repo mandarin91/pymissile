@@ -122,6 +122,7 @@ class Game:
         self.update_missiles()
         self.update_bombs()
         self.update_explosions()
+        self.update_cities()
         self.check_collisions()
 
     # update state of missiles
@@ -151,7 +152,6 @@ class Game:
     def update_cities(self):
         inactive_cities = []
         for city in self.cities:
-            city.update()
             if not city.isActive:
                 inactive_cities.append(city)
 
@@ -216,10 +216,14 @@ class Game:
 
     # destroys objects that have been hit
     def check_collisions(self):
-        for explosion in self.explosions:
-            for missile in self.missiles:
+        for missile in self.missiles:
+            for explosion in self.explosions:
                 if explosion.contains(missile.currentPosition):
                     missile.isActive = False
+            for city in self.cities:
+                if city.contains(missile.currentPosition):
+                    self.add_explosion((int(missile.currentPosition[0]), int(missile.currentPosition[1])))
+                    city.isActive = False
 
 
 # MISSILE #
@@ -303,8 +307,8 @@ class City:
         self.rect.center = left + index * (right - left) / 3 - (right - left) / 6, SCREENHEIGHT - self.cityHeight / 2
         self.isActive = True
 
-    def check(self):
-        pass
+    def contains(self, point):
+        return point[0] >= self.rect.left and point[0] <= self.rect.right and point[1] >= self.rect.top
 
     # draws cities to screen
     def draw(self):
