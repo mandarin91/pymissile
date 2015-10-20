@@ -10,7 +10,7 @@ BATTERYWIDTH = BATTERYRADIUS * 2
 SPAWNWAIT = 1400
 FPS = 60
 
-#            R    G    B
+#        R    G    B
 GRAY = (100, 100, 100)
 NAVYBLUE = (60, 60, 100)
 WHITE = (255, 255, 255)
@@ -27,6 +27,7 @@ BLACK = (0, 0, 0)
 # MAIN CLASS
 class Game:
     def __init__(self):
+        self.score = 0
         self.fullscreen = False  # used for toggling
         self.speed = 1  # speed of missiles
         self.missiles = []
@@ -44,6 +45,7 @@ class Game:
         global SCREEN
         SCREEN = pygame.display.set_mode(SCREENSIZE)
         clock = pygame.time.Clock()
+        gameOver = False
 
         joystick = None
         if pygame.joystick.get_count() > 0:
@@ -58,9 +60,11 @@ class Game:
         mousex = 0  # used to store x coordinate of mouse event
         mousey = 0  # used to store y coordinate of mouse event
 
-        while True:  # game loop
+        while not gameOver:  # game loop
 
             SCREEN.fill(BLACK)
+
+            self.displayscore()  # self explanatory
 
             ticks = pygame.time.get_ticks()
             if ticks > 10000:
@@ -109,6 +113,8 @@ class Game:
             pygame.display.flip()
             clock.tick(FPS)
 
+        self.gameover()
+
     # toggles fullscreen when spacebar pressed
     def toggleFullScreen(self):
         self.fullscreen = not self.fullscreen
@@ -117,6 +123,22 @@ class Game:
         else:
             SCREEN = pygame.display.set_mode(SCREENSIZE)
 
+    def displayscore(self):
+        font = pygame.font.SysFont("agencyfb", 28, bold=False, italic=False)
+        text = font.render("SCORE "+str(self.score), 1, WHITE)
+        textpos = text.get_rect()
+        textpos.right = SCREENWIDTH - 2
+        textpos.top = 0
+        SCREEN.blit(text, textpos)
+
+    def gameover(self):
+        font = pygame.font.SysFont("agencyfb", 36, bold=False, italic=False)
+        text1 = font.render("GAME OVER", 1, WHITE)
+        text2 = font.render("SCORE " + str(self.score), 1, WHITE)
+        text1pos = text1.get_rect()
+        text1pos.center = SCREEN.get_rect().center
+        SCREEN.blit(text1, text1pos)
+
     # updates game state by calling other methods
     def update(self):
         self.update_missiles()
@@ -124,6 +146,8 @@ class Game:
         self.update_explosions()
         self.update_cities()
         self.check_collisions()
+        if len(self.cities) == 0:
+            gameOver = True
 
     # update state of missiles
     def update_missiles(self):
@@ -220,10 +244,15 @@ class Game:
             for explosion in self.explosions:
                 if explosion.contains(missile.currentPosition):
                     missile.isActive = False
+                    self.score += 1
+                    # print("Score " + str(self.score))
+
             for city in self.cities:
                 if city.contains(missile.currentPosition):
                     self.add_explosion((int(missile.currentPosition[0]), int(missile.currentPosition[1])))
                     city.isActive = False
+                    self.score -= 1
+                    # print("Score " + str(self.score))
 
 
 # MISSILE #
@@ -291,8 +320,6 @@ class Bomb:
 
 # CITY #
 class City:
-    cityWidth = 50
-    cityHeight = 30
 
     # constructor
     def __init__(self, index, side):
@@ -301,18 +328,18 @@ class City:
             left, right = 0, SCREENWIDTH / 2 - BATTERYWIDTH
         else:
             left, right = SCREENWIDTH / 2 + BATTERYWIDTH, SCREENWIDTH
-        self.city = pygame.Surface((self.cityWidth, self.cityHeight))
-        self.city.fill(WHITE)
-        self.rect = self.city.get_rect()
-        self.rect.center = left + index * (right - left) / 3 - (right - left) / 6, SCREENHEIGHT - self.cityHeight / 2
+        self.cityImage = pygame.image.load("building.png")
+        self.cityWidth, self.cityHeight = self.cityImage.get_size()
+        self.rect = self.cityImage.get_rect()
+        self.rect.center = [left + index * (right - left) / 3 - (right - left) / 6, SCREENHEIGHT - self.cityHeight / 2]
         self.isActive = True
 
     def contains(self, point):
-        return point[0] >= self.rect.left and point[0] <= self.rect.right and point[1] >= self.rect.top
+        return self.rect.left <= point[0] <= self.rect.right and point[1] >= self.rect.center[1]
 
     # draws cities to screen
     def draw(self):
-        SCREEN.blit(self.city, (self.rect.x, self.rect.y))
+        SCREEN.blit(self.cityImage, (self.rect.x, self.rect.y))
 
 
 # EXPLOSIONS #
