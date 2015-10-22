@@ -4,7 +4,7 @@ from math import hypot
 
 
 # constants
-SCREENSIZE = SCREENWIDTH, SCREENHEIGHT = 900, 600
+SCREENSIZE = SCREENWIDTH, SCREENHEIGHT = 1366, 768
 BATTERYRADIUS = 20
 BATTERYWIDTH = BATTERYRADIUS * 2
 SPAWNWAIT = 1400
@@ -37,6 +37,7 @@ class Game:
         self.update_missiles()
         self.update_bombs()
         self.add_cities()
+        self.gameOver = False
 
     def main(self):
         # init
@@ -45,7 +46,6 @@ class Game:
         global SCREEN
         SCREEN = pygame.display.set_mode(SCREENSIZE)
         clock = pygame.time.Clock()
-        gameOver = False
 
         joystick = None
         if pygame.joystick.get_count() > 0:
@@ -60,60 +60,64 @@ class Game:
         mousex = 0  # used to store x coordinate of mouse event
         mousey = 0  # used to store y coordinate of mouse event
 
-        while not gameOver:  # game loop
+        while True:  # game loop
 
             SCREEN.fill(BLACK)
 
             self.displayscore()  # self explanatory
 
-            ticks = pygame.time.get_ticks()
-            if ticks > 10000:
-                self.speed = int(ticks / 10000)
+            if not self.gameOver:
 
-            self.add_missile()  # spawn a missile every two seconds
+                ticks = pygame.time.get_ticks()
+                if ticks > 10000:
+                    self.speed = int(ticks / 10000)
 
-            for event in pygame.event.get():  # event handling loop
-                if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
-                    pygame.quit()
-                    sys.exit()
-                elif event.type == KEYUP and event.key == K_SPACE:
-                    self.toggleFullScreen()
-                elif event.type == MOUSEMOTION:
-                    mousex, mousey = event.pos
-                    crossrect.center = event.pos
-                elif event.type == MOUSEBUTTONUP:
-                    mousepos = mousex, mousey = event.pos
-                    self.add_bomb(mousepos)
-                elif event.type == JOYBUTTONDOWN:
-                    self.add_bomb(crossrect.center)
+                self.add_missile()  # spawn a missile every two seconds
 
-            if joystick != None:
-                axis_x = joystick.get_axis(0)
-                axis_y = joystick.get_axis(1)
+                for event in pygame.event.get():  # event handling loop
+                    if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
+                        pygame.quit()
+                        sys.exit()
+                    elif event.type == KEYUP and event.key == K_SPACE:
+                        self.toggleFullScreen()
+                    elif event.type == MOUSEMOTION:
+                        mousex, mousey = event.pos
+                        crossrect.center = event.pos
+                    elif event.type == MOUSEBUTTONUP:
+                        mousepos = mousex, mousey = event.pos
+                        self.add_bomb(mousepos)
+                    elif event.type == JOYBUTTONDOWN:
+                        self.add_bomb(crossrect.center)
 
-                if abs(axis_x) < 0.01:
-                    axis_x = 0
-                if abs(axis_y) < 0.01:
-                    axis_y = 0
+                if joystick != None:
+                    axis_x = joystick.get_axis(0)
+                    axis_y = joystick.get_axis(1)
 
-                crossrect.x += crossSpeed * axis_x
-                crossrect.y += crossSpeed * axis_y
+                    if abs(axis_x) < 0.01:
+                        axis_x = 0
+                    if abs(axis_y) < 0.01:
+                        axis_y = 0
 
-            if crossrect.left < 0: crossrect.left = 0
-            if crossrect.right > SCREENWIDTH: crossrect.right = SCREENWIDTH
-            if crossrect.top < 0: crossrect.top = 0
-            if crossrect.bottom > SCREENHEIGHT - BATTERYWIDTH: crossrect.bottom = SCREENHEIGHT - BATTERYWIDTH
+                    crossrect.x += crossSpeed * axis_x
+                    crossrect.y += crossSpeed * axis_y
 
-            # update missile/bomb list and draw them
-            self.update()
-            self.draw()
+                if crossrect.left < 0: crossrect.left = 0
+                if crossrect.right > SCREENWIDTH: crossrect.right = SCREENWIDTH
+                if crossrect.top < 0: crossrect.top = 0
+                if crossrect.bottom > SCREENHEIGHT - BATTERYWIDTH: crossrect.bottom = SCREENHEIGHT - BATTERYWIDTH
+
+                # update missile/bomb list and draw them
+                self.update()
+                self.draw()
+
+                SCREEN.blit(crosshair, (crossrect.x, crossrect.y))
+
+            else:
+                self.gameover()  # display game over screen
 
             # Redraw the screen and wait a clock tick.
-            SCREEN.blit(crosshair, (crossrect.x, crossrect.y))
             pygame.display.flip()
             clock.tick(FPS)
-
-        self.gameover()
 
     # toggles fullscreen when spacebar pressed
     def toggleFullScreen(self):
@@ -138,6 +142,7 @@ class Game:
         text1pos = text1.get_rect()
         text1pos.center = SCREEN.get_rect().center
         SCREEN.blit(text1, text1pos)
+        # pygame.display.flip()
 
     # updates game state by calling other methods
     def update(self):
@@ -147,7 +152,7 @@ class Game:
         self.update_cities()
         self.check_collisions()
         if len(self.cities) == 0:
-            gameOver = True
+            self.gameOver = True
 
     # update state of missiles
     def update_missiles(self):
