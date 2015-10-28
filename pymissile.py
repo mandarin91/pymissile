@@ -9,12 +9,13 @@ from math import hypot, sqrt
 SCREENSIZE = SCREENWIDTH, SCREENHEIGHT = 1360, 760
 BATTERYRADIUS = 20
 BATTERYWIDTH = BATTERYRADIUS * 2
-SPAWNWAIT = 1700
+SPAWNWAIT = 2000
 FPS = 60
 PROJECTILEHEIGHT = SCREENHEIGHT / 6
 PLANEHEIGHT = SCREENHEIGHT / 7
 
-#        R    G    B
+
+# RGB codes
 GRAY = (100, 100, 100)
 NAVYBLUE = (60, 60, 100)
 WHITE = (255, 255, 255)
@@ -34,14 +35,16 @@ class Game:
         self.score = 0
         self.fullscreen = True  # used for toggling
         self.speed = 1  # speed of missiles
+        self.time = 0
         self.missiles = []
         self.projectiles = []
         self.counterMissiles = []
         self.cities = []
         self.explosions = []
         self.planes = []
+        self.bombs = []
         self.update_missiles()
-        self.update_counterMissiles()
+        self.update_counter_missiles()
         self.add_cities()
         self.gameOver = False
 
@@ -56,11 +59,13 @@ class Game:
 
         # pygame.mixer.Sound('Powerup3.wav').play()
 
+        # joystick
         joystick = None
         if pygame.joystick.get_count() > 0:
             joystick = pygame.joystick.Joystick(0)
             joystick.init()
 
+        # crosshair init
         crosshair = pygame.image.load("crosshair.png")
         crossrect = crosshair.get_rect()
         crossrect.center = SCREENWIDTH / 2, SCREENHEIGHT / 2
@@ -69,7 +74,8 @@ class Game:
         mousex = 0  # used to store x coordinate of mouse event
         mousey = 0  # used to store y coordinate of mouse event
 
-        while True:  # game loop
+        # game loop
+        while True:
 
             SCREEN.fill(BLACK)
             # SCREEN.blit(background, (0, 0))
@@ -78,25 +84,30 @@ class Game:
 
             if not self.gameOver:
 
+                # time management
                 ticks = pygame.time.get_ticks()
                 if ticks > 10000:
                     self.speed = int(ticks / 10000)
+                if ticks > 1000:
+                    self.time = int(ticks/1000)
 
-                for event in pygame.event.get():  # event handling loop
+                # event handling loop
+                for event in pygame.event.get():
                     if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
                         pygame.quit()
                         sys.exit()
                     elif event.type == KEYUP and event.key == K_SPACE:
-                        self.toggleFullScreen()
+                        self.toggle_full_screen()
                     elif event.type == MOUSEMOTION:
                         mousex, mousey = event.pos
                         crossrect.center = event.pos
                     elif event.type == MOUSEBUTTONUP:
                         mousepos = mousex, mousey = event.pos
-                        self.add_counterMissile(mousepos)
+                        self.add_counter_missile(mousepos)
                     elif event.type == JOYBUTTONDOWN:
-                        self.add_counterMissile(crossrect.center)
+                        self.add_counter_missile(crossrect.center)
 
+                # more joystick code
                 if joystick is not None:
                     axis_x = joystick.get_axis(0)
                     axis_y = joystick.get_axis(1)
@@ -109,10 +120,15 @@ class Game:
                     crossrect.x += crossSpeed * axis_x
                     crossrect.y += crossSpeed * axis_y
 
-                if crossrect.left < 0: crossrect.left = 0
-                if crossrect.right > SCREENWIDTH: crossrect.right = SCREENWIDTH
-                if crossrect.top < 0: crossrect.top = 0
-                if crossrect.bottom > SCREENHEIGHT - BATTERYWIDTH: crossrect.bottom = SCREENHEIGHT - BATTERYWIDTH
+                # crosshair positioning
+                if crossrect.left < 0:
+                    crossrect.left = 0
+                if crossrect.right > SCREENWIDTH:
+                    crossrect.right = SCREENWIDTH
+                if crossrect.top < 0:
+                    crossrect.top = 0
+                if crossrect.bottom > SCREENHEIGHT - BATTERYWIDTH:
+                    crossrect.bottom = SCREENHEIGHT - BATTERYWIDTH
 
                 # update missile/counterMissile list and draw them
                 self.add_missile()  # spawn a missile every two seconds
@@ -133,7 +149,7 @@ class Game:
             clock.tick(FPS)
 
     # toggles fullscreen when spacebar pressed
-    def toggleFullScreen(self):
+    def toggle_full_screen(self):
         self.fullscreen = not self.fullscreen
         if self.fullscreen:
             SCREEN = pygame.display.set_mode(SCREENSIZE, pygame.FULLSCREEN)
@@ -162,10 +178,11 @@ class Game:
     # updates game state by calling other methods
     def update(self):
         self.update_missiles()
-        self.update_counterMissiles()
+        self.update_counter_missiles()
         self.update_explosions()
         self.update_cities()
         self.update_planes()
+        self.update_bombs()
         self.check_collisions()
         if len(self.cities) == 0:
             self.gameOver = True
@@ -191,7 +208,7 @@ class Game:
             self.projectiles.remove(projectile)
 
     # update state of counterMissiles
-    def update_counterMissiles(self):
+    def update_counter_missiles(self):
         inactive_counterMissiles = []
         for counterMissile in self.counterMissiles:
             counterMissile.update_position()
@@ -202,11 +219,26 @@ class Game:
         for counterMissile in inactive_counterMissiles:
             self.counterMissiles.remove(counterMissile)
 
+    # update state of bombs
+    def update_bombs(self):
+        inactive_bombs = []
+        for bomb in self.bombs:
+            bomb.update_position()
+            if not bomb.isActive:
+                inactive_bombs.append(bomb)
+
+        for bomb in inactive_bombs:
+            self.bombs.remove(bomb)
+
     # update state of planes
     def update_planes(self):
         inactive_planes = []
         for plane in self.planes:
             plane.update_position()
+            if plane.drop:
+                bomb = Bomb(plane.dropPoint)
+                self.bombs.append(bomb)
+                plane.drop = False
             if not plane.isActive:
                 inactive_planes.append(plane)
                 # self.add_explosion(plane.endingPoint)
@@ -243,6 +275,8 @@ class Game:
             projectile.draw()
         for counterMissile in self.counterMissiles:
             counterMissile.draw()
+        for bomb in self.bombs:
+            bomb.draw()
         for city in self.cities:
             city.draw()
         for plane in self.planes:
@@ -251,7 +285,7 @@ class Game:
             explosion.draw()
         self.add_battery()
 
-    # adds missiles and projectiles to game state
+    # adds missiles and projectiles and jets to game state
     def add_missile(self):
         start = [random.randint(0, SCREENWIDTH), 0]
         end = [random.randint(0, SCREENWIDTH), SCREENHEIGHT]
@@ -265,12 +299,13 @@ class Game:
             projectile = Projectile((random.randrange(0, SCREENWIDTH+1, SCREENWIDTH), PROJECTILEHEIGHT), end)
             self.projectiles.append(projectile)
 
-        if len(self.planes) == 0:
-            plane = Plane([0, PLANEHEIGHT])
+        if self.time % 10 == 0 and len(self.planes) == 0:
+            drop = self.cities[random.randrange(len(self.cities))].rect.center
+            plane = Plane(drop)
             self.planes.append(plane)
 
-    # adds counterMissiles/counter-missiles to game state
-    def add_counterMissile(self, end):
+    # adds counter-missiles to game state
+    def add_counter_missile(self, end):
         start = [SCREENWIDTH / 2, SCREENHEIGHT - BATTERYRADIUS]
         counterMissile = CounterMissile(start, end)
         self.counterMissiles.append(counterMissile)
@@ -285,7 +320,8 @@ class Game:
             self.cities.append(city)
 
     # adds battery (gun) to screen
-    def add_battery(self):
+    @staticmethod
+    def add_battery():
         pygame.draw.circle(SCREEN, GRAY, (int(SCREENWIDTH / 2), int(SCREENHEIGHT)), BATTERYRADIUS)
 
     # adds explosion at crosshair position
@@ -303,21 +339,39 @@ class Game:
             for projectile in self.projectiles:
                 if explosion.contains(projectile.currentPosition):
                     projectile.isActive = False
-                    self.score += 1
+                    self.score += 2
+            for bomb in self.bombs:
+                if explosion.contains(bomb.currentPosition):
+                    bomb.isActive = False
+                    self.score += 5
+            for plane in self.planes:
+                if explosion.contains(plane.currentPosition) or \
+                        explosion.contains((plane.rect.right, PLANEHEIGHT)) or \
+                        explosion.contains((plane.rect.left, PLANEHEIGHT)):
+                    plane.isActive = False
+                    self.score += 5
                     # print("Score " + str(self.score))
 
         for city in self.cities:
             for missile in self.missiles:
                 if city.contains(missile.currentPosition):
+                    missile.isActive = False
                     self.add_explosion((int(missile.currentPosition[0]), int(missile.currentPosition[1])))
                     city.isActive = False
-                    self.score -= 1
+                    self.score -= 10
             for projectile in self.projectiles:
                 if city.contains(projectile.currentPosition):
+                    projectile.isActive = False
                     self.add_explosion((int(projectile.currentPosition[0]), int(projectile.currentPosition[1])))
                     city.isActive = False
-                    self.score -= 1
+                    self.score -= 5
                     # print("Score " + str(self.score))
+            for bomb in self.bombs:
+                if city.contains(bomb.currentPosition):
+                    bomb.isActive = False
+                    self.add_explosion((int(bomb.currentPosition[0]), int(bomb.currentPosition[1])))
+                    city.isActive = False
+                    self.score -= 15
 
 
 # MISSILE #
@@ -337,7 +391,7 @@ class Missile:
     def update_position(self):
         if self.currentPosition[1] < self.endingPoint[1]:
             # drop the missile down 1 point
-            self.currentPosition[1] += 1 * self.missileSpeed
+            self.currentPosition[1] += self.missileSpeed
             self.currentPosition[0] += self.deltaX * self.missileSpeed
         else:
             # we've reached the bottom of the screen...
@@ -382,11 +436,11 @@ class Projectile:
     # draw the missile to the screen
     def draw(self):
         if self.isActive:
-            pygame.draw.aalines(SCREEN, RED, False, self.pointlist, 1000)
+            pygame.draw.aalines(SCREEN, CYAN, False, self.pointlist, 1000)
             pygame.draw.circle(SCREEN, WHITE, (int(self.currentPosition[0]), int(self.currentPosition[1])), self.size)
 
 
-# BOMB #
+# COUNTER MISSILE / ANTI-BALLISTIC #
 class CounterMissile:
     # constructor
     def __init__(self, startingPoint, endingPoint):
@@ -417,6 +471,36 @@ class CounterMissile:
             pygame.draw.aaline(SCREEN, YELLOW, self.startingPoint, self.currentPosition)
             pygame.draw.circle(SCREEN, YELLOW, (int(self.currentPosition[0]), int(self.currentPosition[1])),
                                self.counterMissileSize)
+
+
+# BOMB #
+class Bomb:
+    # constructor
+    def __init__(self, dropPoint):
+        self.startingPoint = [dropPoint[0], PLANEHEIGHT]
+        self.endingPoint = dropPoint
+        self.currentPosition = [self.startingPoint[0], self.startingPoint[1]]
+        self.isActive = True
+        # self.deltaX = (self.endingPoint[0] - self.startingPoint[0]) / self.endingPoint[1]
+        self.bombSize = 5
+        self.spawntime = pygame.time.get_ticks()
+        self.bombSpeed = 1  # random.randint(int(speed / 4) + 1, speed) * 0.70
+
+    # update position method
+    def update_position(self):
+        if self.currentPosition[1] < self.endingPoint[1]:
+            # drop the bomb down 1 point
+            self.bombSpeed += 0.05
+            self.currentPosition[1] += self.bombSpeed
+        else:
+            # we've reached the bottom of the screen...
+            self.isActive = False
+
+    # draw the bomb to the screen
+    def draw(self):
+        if self.isActive:
+            # pygame.draw.aaline(SCREEN, ORANGE, self.startingPoint, self.currentPosition)
+            pygame.draw.circle(SCREEN, RED, (int(self.currentPosition[0]), int(self.currentPosition[1])), self.bombSize)
 
 
 # CITY #
@@ -472,19 +556,22 @@ class Explosion:
         return hypot(self.location[0] - point[0], self.location[1] - point[1]) <= self.radius
 
 
+# PLANES #
 class Plane:
     # constructor
-    def __init__(self, startingPoint):
-        self.startingPoint = startingPoint
-        if startingPoint[0] == 0:
+    def __init__(self, dropPoint):
+        self.startingPoint = [0, PLANEHEIGHT]
+        if self.startingPoint[0] == 0:
             self.endingPoint = (SCREENWIDTH, PLANEHEIGHT)
             self.deltaX = 1
-        else:
-            self.endingPoint = (0, PLANEHEIGHT)
-            self.deltaX = -1
+        # else:
+        #     self.endingPoint = (0, PLANEHEIGHT)
+        #     self.deltaX = -1
         self.currentPosition = self.startingPoint
+        self.dropPoint = dropPoint
         self.isActive = True
-        self.spawntime = pygame.time.get_ticks()
+        self.drop = False
+        self.spawnTime = pygame.time.get_ticks()
         self.image = pygame.image.load("plane.png")
         self.rect = self.image.get_rect()
         # self.missileSpeed = random.randint(int(speed / 4) + 1, speed) * 0.70
@@ -497,6 +584,9 @@ class Plane:
         else:
             # we've reached the end of the screen...
             self.isActive = False
+
+        if self.rect.right == self.dropPoint[0]:
+            self.drop = True
 
     # draw the plane to the screen
     def draw(self):
