@@ -1,3 +1,8 @@
+# PYMISSILE - a Missile Command clone
+# © 2015 Mandarin Studios
+# contact@mandarin.ml
+
+
 import sys
 import random
 import pygame
