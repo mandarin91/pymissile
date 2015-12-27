@@ -6,10 +6,10 @@ from math import hypot, sqrt
 
 
 # constants
-SCREENSIZE = SCREENWIDTH, SCREENHEIGHT = 1360, 760
+SCREENSIZE = SCREENWIDTH, SCREENHEIGHT = 1366, 768
 BATTERYRADIUS = 20
 BATTERYWIDTH = BATTERYRADIUS * 2
-SPAWNWAIT = 2000
+SPAWNWAIT = 4000
 FPS = 60
 PROJECTILEHEIGHT = SCREENHEIGHT / 6
 PLANEHEIGHT = SCREENHEIGHT / 7
@@ -29,9 +29,14 @@ CYAN = (0, 255, 255)
 BLACK = (0, 0, 0)
 
 
-# MAIN CLASS
+# MAIN CLASS #
 class Game:
+
     def __init__(self):
+        self.start = True
+
+    # setup game
+    def setup(self):
         self.score = 0
         self.fullscreen = True  # used for toggling
         self.speed = 1  # speed of missiles
@@ -46,19 +51,28 @@ class Game:
         self.update_missiles()
         self.update_counter_missiles()
         self.add_cities()
+        self.initTime = pygame.time.get_ticks()
         self.gameOver = False
+        self.pause = False
 
+    # program starts from
     def main(self):
         # init
         pygame.init()
+        pygame.mixer.init()
         pygame.display.set_caption('PyMissile')
-        global SCREEN
+        global SCREEN, CLOCK
         SCREEN = pygame.display.set_mode(SCREENSIZE, pygame.FULLSCREEN)
-        clock = pygame.time.Clock()
-        background = pygame.image.load("background.png")
+        CLOCK = pygame.time.Clock()
+        # background = pygame.image.load("background.png")
 
         # pygame.mixer.Sound('Powerup3.wav').play()
 
+        # run the game
+        self.run()
+
+    # runs the game
+    def run(self):
         # joystick
         joystick = None
         if pygame.joystick.get_count() > 0:
@@ -68,85 +82,110 @@ class Game:
         # crosshair init
         crosshair = pygame.image.load("crosshair.png")
         crossrect = crosshair.get_rect()
-        crossrect.center = SCREENWIDTH / 2, SCREENHEIGHT / 2
         crossSpeed = 9
 
-        mousex = 0  # used to store x coordinate of mouse event
-        mousey = 0  # used to store y coordinate of mouse event
+        done = False
 
-        # game loop
-        while True:
+        while not done:
 
-            SCREEN.fill(BLACK)
-            # SCREEN.blit(background, (0, 0))
+            done = False
+            over = False
 
-            self.display_score()  # self explanatory
+            crossrect.center = SCREENWIDTH / 2, SCREENHEIGHT / 2
 
-            if not self.gameOver:
+            self.setup()
 
-                # time management
-                ticks = pygame.time.get_ticks()
-                if ticks > 10000:
-                    self.speed = int(ticks / 10000)
-                if ticks > 1000:
-                    self.time = int(ticks/1000)
+            while not over:
+                SCREEN.fill(BLACK)
+                # SCREEN.blit(background, (0, 0))
 
-                # event handling loop
-                for event in pygame.event.get():
-                    if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
-                        pygame.quit()
-                        sys.exit()
-                    elif event.type == KEYUP and event.key == K_SPACE:
-                        self.toggle_full_screen()
-                    elif event.type == MOUSEMOTION:
-                        mousex, mousey = event.pos
-                        crossrect.center = event.pos
-                    elif event.type == MOUSEBUTTONUP:
-                        mousepos = mousex, mousey = event.pos
-                        self.add_counter_missile(mousepos)
-                    elif event.type == JOYBUTTONDOWN:
-                        self.add_counter_missile(crossrect.center)
+                if not self.start:
+                    self.display_score()  # self explanatory
 
-                # more joystick code
-                if joystick is not None:
-                    axis_x = joystick.get_axis(0)
-                    axis_y = joystick.get_axis(1)
+                    if not self.gameOver:
 
-                    if abs(axis_x) < 0.01:
-                        axis_x = 0
-                    if abs(axis_y) < 0.01:
-                        axis_y = 0
+                        # time management
+                        if not self.pause:
+                            ticks = pygame.time.get_ticks()
+                            if ticks - self.initTime > 10000:
+                                self.speed = int((ticks - self.initTime) / 10000)
+                            if ticks - self.initTime > 1000:
+                                self.time = int((ticks - self.initTime) / 1000)
 
-                    crossrect.x += crossSpeed * axis_x
-                    crossrect.y += crossSpeed * axis_y
+                        # event handling loop
+                        for event in pygame.event.get():
+                            if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
+                                pygame.quit()
+                                sys.exit()
+                            elif event.type == KEYUP and event.key == K_SPACE:
+                                self.toggle_full_screen()
+                            elif event.type == KEYUP:  # and event.key == K_p:
+                                self.pause = not self.pause
+                                if self.pause:
+                                    ticks = pygame.time.get_ticks()
+                                # print(ticks)
+                            elif event.type == MOUSEMOTION:
+                                mousex, mousey = event.pos
+                                crossrect.center = event.pos
+                            elif event.type == MOUSEBUTTONUP:
+                                mousepos = mousex, mousey = event.pos
+                                if not self.pause:
+                                    self.add_counter_missile(crossrect.center)
+                            elif event.type == JOYBUTTONDOWN:
+                                if not self.pause:
+                                    self.add_counter_missile(crossrect.center)
 
-                # crosshair positioning
-                if crossrect.left < 0:
-                    crossrect.left = 0
-                if crossrect.right > SCREENWIDTH:
-                    crossrect.right = SCREENWIDTH
-                if crossrect.top < 0:
-                    crossrect.top = 0
-                if crossrect.bottom > SCREENHEIGHT - BATTERYWIDTH:
-                    crossrect.bottom = SCREENHEIGHT - BATTERYWIDTH
+                        if not self.pause:
+                            # more joystick code
+                            if joystick is not None:
+                                axis_x = joystick.get_axis(0)
+                                axis_y = joystick.get_axis(1)
 
-                # update missile/counterMissile list and draw them
-                self.add_missile()  # spawn a missile every two seconds
-                self.update()
-                self.draw()
+                                if abs(axis_x) < 0.01:
+                                    axis_x = 0
+                                if abs(axis_y) < 0.01:
+                                    axis_y = 0
 
-                SCREEN.blit(crosshair, (crossrect.x, crossrect.y))
+                                crossrect.x += crossSpeed * axis_x
+                                crossrect.y += crossSpeed * axis_y
 
-            else:
-                self.game_over()  # display game over screen
-                for event in pygame.event.get():  # event handling loop
-                    if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
-                        pygame.quit()
-                        sys.exit()
+                            # crosshair positioning
+                            if crossrect.left < 0:
+                                crossrect.left = 0
+                            if crossrect.right > SCREENWIDTH:
+                                crossrect.right = SCREENWIDTH
+                            if crossrect.top < 0:
+                                crossrect.top = 0
+                            if crossrect.bottom > SCREENHEIGHT - BATTERYWIDTH:
+                                crossrect.bottom = SCREENHEIGHT - BATTERYWIDTH
 
-            # Redraw the screen and wait a clock tick.
-            pygame.display.update()
-            clock.tick(FPS)
+                            # update missile/counterMissile list and draw them
+                            self.add_missile()  # spawn a missile every two seconds
+                            self.update()
+                            self.draw()
+
+                            SCREEN.blit(crosshair, (crossrect.x, crossrect.y))
+
+                        else:
+                            self.pause_screen()  # show pause screen
+
+                    else:
+                        self.game_over()  # display game over screen
+                        for event in pygame.event.get():  # event handling loop
+                            if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
+                                self.check_high_score()  # check if score is highest
+                                pygame.quit()
+                                sys.exit()
+                            elif event.type == KEYUP or event.type == JOYBUTTONDOWN:  # and event.key == K_SPACE:
+                                done = False
+                                over = True
+                                self.check_high_score()  # check if score is highest
+                else:
+                    self.start_screen()
+
+                # Redraw the screen and wait a clock tick.
+                pygame.display.update()
+                CLOCK.tick(FPS)
 
     # toggles fullscreen when spacebar pressed
     def toggle_full_screen(self):
@@ -166,14 +205,56 @@ class Game:
         SCREEN.blit(text, textpos)
 
     # display game over screen
-    def game_over(self):
-        font = pygame.font.SysFont("agencyfb", 36, bold=False, italic=False)
+    @staticmethod
+    def game_over():
+        font = pygame.font.SysFont("agencyfb", 56, bold=False, italic=False)
+        font2 = pygame.font.SysFont("agencyfb", 24, bold=False, italic=False)
         text1 = font.render("GAME OVER", 1, WHITE)
-        text2 = font.render("SCORE " + str(self.score), 1, WHITE)
+        text2 = font2.render("PRESS ANY KEY TO REPLAY", 1, WHITE)
         text1pos = text1.get_rect()
         text1pos.center = SCREEN.get_rect().center
         SCREEN.blit(text1, text1pos)
+        text2pos = text2.get_rect()
+        text2pos.center = SCREEN.get_rect().center
+        text2pos.y += text1pos.height/2 + 5
+        SCREEN.blit(text2, text2pos)
         # pygame.display.flip()
+
+    # display pause screen
+    @staticmethod
+    def pause_screen():
+        font = pygame.font.SysFont("agencyfb", 56, bold=False, italic=False)
+        font2 = pygame.font.SysFont("agencyfb", 24, bold=False, italic=False)
+        text1 = font.render("PAUSE", 1, WHITE)
+        text2 = font2.render("PRESS ANY KEY TO RESUME", 1, WHITE)
+        text1pos = text1.get_rect()
+        text1pos.center = SCREEN.get_rect().center
+        SCREEN.blit(text1, text1pos)
+        text2pos = text2.get_rect()
+        text2pos.center = SCREEN.get_rect().center
+        text2pos.y += text1pos.height/2 + 5
+        SCREEN.blit(text2, text2pos)
+        # pygame.display.flip()
+
+    # display start screen
+    def start_screen(self):
+        font = pygame.font.SysFont("agencyfb", 56, bold=False, italic=False)
+        font2 = pygame.font.SysFont("agencyfb", 24, bold=False, italic=False)
+        text1 = font.render("PYMISSILE", 1, WHITE)
+        text2 = font2.render("PRESS ANY KEY TO START", 1, WHITE)
+        text1pos = text1.get_rect()
+        text1pos.center = SCREEN.get_rect().center
+        SCREEN.blit(text1, text1pos)
+        text2pos = text2.get_rect()
+        text2pos.center = SCREEN.get_rect().center
+        text2pos.y += text1pos.height/2 + 5
+        SCREEN.blit(text2, text2pos)
+        for event in pygame.event.get():
+            if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
+                pygame.quit()
+                sys.exit()
+            elif event.type == KEYUP or event.type == MOUSEBUTTONUP or event.type == JOYBUTTONDOWN:
+                self.start = False
 
     # updates game state by calling other methods
     def update(self):
@@ -290,17 +371,21 @@ class Game:
         start = [random.randint(0, SCREENWIDTH), 0]
         end = [random.randint(0, SCREENWIDTH), SCREENHEIGHT]
         now = pygame.time.get_ticks()
+        drop = self.cities[random.randrange(len(self.cities))].rect.center
 
         if len(self.missiles) == 0 or now - self.missiles[-1].spawntime >= SPAWNWAIT:
+            if random.randrange(5) == 3:
+                end = drop
             missile = Missile(start, end, self.speed)
             self.missiles.append(missile)
 
         if len(self.projectiles) == 0:  # or now - self.projectiles[-1].spawntime >= SPAWNWAIT:
+            if random.randrange(8) == 4:
+                end = drop
             projectile = Projectile((random.randrange(0, SCREENWIDTH+1, SCREENWIDTH), PROJECTILEHEIGHT), end)
             self.projectiles.append(projectile)
 
         if self.time % 10 == 0 and len(self.planes) == 0:
-            drop = self.cities[random.randrange(len(self.cities))].rect.center
             plane = Plane(drop)
             self.planes.append(plane)
 
@@ -335,11 +420,11 @@ class Game:
             for missile in self.missiles:
                 if explosion.contains(missile.currentPosition):
                     missile.isActive = False
-                    self.score += 1
+                    self.score += 2
             for projectile in self.projectiles:
                 if explosion.contains(projectile.currentPosition):
                     projectile.isActive = False
-                    self.score += 2
+                    self.score += 3
             for bomb in self.bombs:
                 if explosion.contains(bomb.currentPosition):
                     bomb.isActive = False
@@ -351,6 +436,11 @@ class Game:
                     plane.isActive = False
                     self.score += 5
                     # print("Score " + str(self.score))
+            for city in self.cities:
+                if explosion.contains(city.rect.center):
+                    city.isActive = False
+                    # self.add_explosion((int(missile.currentPosition[0]), int(missile.currentPosition[1])))
+                    self.score -= 10
 
         for city in self.cities:
             for missile in self.missiles:
@@ -364,14 +454,28 @@ class Game:
                     projectile.isActive = False
                     self.add_explosion((int(projectile.currentPosition[0]), int(projectile.currentPosition[1])))
                     city.isActive = False
-                    self.score -= 5
+                    self.score -= 10
                     # print("Score " + str(self.score))
             for bomb in self.bombs:
                 if city.contains(bomb.currentPosition):
                     bomb.isActive = False
                     self.add_explosion((int(bomb.currentPosition[0]), int(bomb.currentPosition[1])))
                     city.isActive = False
-                    self.score -= 15
+                    self.score -= 10
+
+    # checks if score is highest
+    def check_high_score(self):
+        file = open('high.txt', 'r')
+        content = file.readlines()
+        high_score = int(content[0])
+        file.close()
+        # print(str(high_score))
+        if self.score > high_score:
+            file = open('high.txt', 'w')
+            file.write(str(self.score))
+            file.close()
+        elif self.score >= high_score:
+            pass
 
 
 # MISSILE #
@@ -385,7 +489,7 @@ class Missile:
         self.deltaX = (self.endingPoint[0] - self.startingPoint[0]) / self.endingPoint[1]
         self.missileSize = 2
         self.spawntime = pygame.time.get_ticks()
-        self.missileSpeed = random.randint(int(speed / 4) + 1, speed) * 0.70
+        self.missileSpeed = random.randint(int(speed / 4) + 1, speed) * 0.60
 
     # update position method
     def update_position(self):
@@ -400,7 +504,7 @@ class Missile:
     # draw the missile to the screen
     def draw(self):
         if self.isActive:
-            pygame.draw.aaline(SCREEN, ORANGE, self.startingPoint, self.currentPosition)
+            pygame.draw.aaline(SCREEN, RED, self.startingPoint, self.currentPosition)
             pygame.draw.circle(SCREEN, WHITE, (int(self.currentPosition[0]), int(self.currentPosition[1])),
                                self.missileSize)
 
@@ -547,8 +651,8 @@ class Explosion:
 
     # draws the explosion to screen
     def draw(self):
-        colors = [RED, ORANGE, YELLOW, GRAY]
-        i = random.randrange(0, len(colors) - 1)
+        colors = [RED, ORANGE, YELLOW]
+        i = random.randrange(len(colors))
         pygame.draw.circle(SCREEN, colors[i], self.location, self.radius)
 
     # returns whether a missile is inside the blast radius
@@ -560,19 +664,23 @@ class Explosion:
 class Plane:
     # constructor
     def __init__(self, dropPoint):
-        self.startingPoint = [0, PLANEHEIGHT]
+        if dropPoint[0] < SCREENWIDTH / 2:
+            self.startingPoint = [0, PLANEHEIGHT]
+        else:
+            self.startingPoint = [SCREENWIDTH, PLANEHEIGHT]
         if self.startingPoint[0] == 0:
             self.endingPoint = (SCREENWIDTH, PLANEHEIGHT)
             self.deltaX = 1
-        # else:
-        #     self.endingPoint = (0, PLANEHEIGHT)
-        #     self.deltaX = -1
+            self.image = pygame.image.load("plane.png")
+        else:
+            self.endingPoint = (0, PLANEHEIGHT)
+            self.deltaX = -1
+            self.image = pygame.image.load("planeFlipped.png")
         self.currentPosition = self.startingPoint
         self.dropPoint = dropPoint
         self.isActive = True
         self.drop = False
         self.spawnTime = pygame.time.get_ticks()
-        self.image = pygame.image.load("plane.png")
         self.rect = self.image.get_rect()
         # self.missileSpeed = random.randint(int(speed / 4) + 1, speed) * 0.70
 
