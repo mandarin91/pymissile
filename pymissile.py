@@ -1,5 +1,5 @@
 # PYMISSILE - a Missile Command clone
-# (c) 2015 Mandarin Studios
+# © 2015 Mandarin Studios
 # contact@mandarin.ml
 
 
