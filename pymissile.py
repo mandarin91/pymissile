@@ -1,6 +1,5 @@
 # PYMISSILE - a Missile Command clone
-# (c) 2015 Mandarin Studios
-# contact@mandarin.ml
+# (c) Mayank Agarwal
 #
 # an abandoned project
 
