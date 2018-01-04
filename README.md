@@ -8,4 +8,4 @@ To get a local copy of this game running:
 ---
 The objective is simple: shoot the enemies and don't die. Click (or use the joystick) to shoot.
 
-![](http://www.mayank.co/images/pymissile0.jpg)
+![](http://www.mayank.co/images/pymissile.jpg)
