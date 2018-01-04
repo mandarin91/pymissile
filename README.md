@@ -6,5 +6,5 @@ To get a local copy of this game running:
 2. Run `$ pip install pygame`
 3. Run `$ python pymissile.py`
 ---
-![](http://www.mayank.co/images/pymissile0.jpg)
 The objective is simple: shoot the enemies and don't die.
+![](http://www.mayank.co/images/pymissile0.jpg)
