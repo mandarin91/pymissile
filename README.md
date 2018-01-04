@@ -7,4 +7,5 @@ To get a local copy of this game running:
 3. Run `$ python pymissile.py`
 ---
 The objective is simple: shoot the enemies and don't die.
+
 ![](http://www.mayank.co/images/pymissile0.jpg)
